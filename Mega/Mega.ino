@@ -25,7 +25,7 @@ TT_Adafruit_NeoPixel strip = TT_Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_
 
 // for laser harp
 int speakerPin = 3;
-int duration = 100;
+int duration = 300;
 
 int laser1 = A0;
 int laser2 = A1;
@@ -76,6 +76,7 @@ int* minVal(int *allVals[]);
 
 void setup()
 {
+  Serial.begin(9600);
   // This is for Trinket 5V 16MHz, you can remove these three lines if you are not using a Trinket
   #if defined (__AVR_ATtiny85__)
     if (F_CPU == 16000000) clock_prescale_set(clock_div_1);
@@ -87,24 +88,26 @@ void setup()
 
   pinMode(wipeB, INPUT_PULLUP);   // Enable pin's pull up resistor
   //TODO: CHECK IF RFID LIB ONLY INITIALIZES PROPER PINS FOR UNO & NOT MEGA
-  rfid.initialize();
-  Serial.begin(9600);  // Initialize serial communications with PC
-  rfid.showReaderDetails();  // Show details of Card Reader
-  rfid.toggleDeleteAllRecords(wipeB);
-  bool masterDefined = rfid.isMasterDefined();
-  if(!masterDefined) {
-    rfid.defineMasterCard();
-  }
-  rfid.printInitMessage();
+   rfid.initialize();
+   Serial.begin(9600);  // Initialize serial communications with PC
+   rfid.showReaderDetails();  // Show details of Card Reader
+   rfid.toggleDeleteAllRecords(wipeB);
+   bool masterDefined = rfid.isMasterDefined();
+   if(!masterDefined) {
+     rfid.defineMasterCard();
+   }
+   rfid.printInitMessage();
 
   pinMode(button1, INPUT_PULLUP);
   pinMode(button2, INPUT_PULLUP);
   pinMode(bigRedSwitch, INPUT);
   pinMode(IR_pin, INPUT);
+  Serial.println("finished running setup");
 }
 
 void loop()
 {
+
   // IR LED CODE
   int IR_val = analogRead(IR_pin);
   // someone's hand is over the sensor
@@ -137,6 +140,8 @@ void loop()
     if(*trigLaser == allLasers[i])
     {
       tone(speakerPin, allTones[i], duration);
+      delay(duration);
+      noTone(1);
     }
   }
 
@@ -241,6 +246,7 @@ void loop()
   {
     strip.theaterChase(color2, wait);
   }
+
 }
 
 int* minVal(int allVals[])
