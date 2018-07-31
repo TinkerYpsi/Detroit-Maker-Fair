@@ -2,7 +2,7 @@
 Adafruit_APDS9960 apds;
 
 // physical button connections
-int up_button = 10;
+int up_button = 12;
 int click_button = 9;
 int down_button = 8;
 
@@ -10,6 +10,11 @@ int down_button = 8;
 int up_output = 6;
 int click_output = 7;
 int down_output = 5;
+
+int prev_up_status;
+int prev_click_status;
+int prev_down_status;
+
 
 void setup()
 {
@@ -38,41 +43,47 @@ void loop()
   int click_status = digitalRead(click_button);
   int down_status = digitalRead(down_button);
 
-  if(up_status == LOW)
+  if(up_status == LOW && prev_up_status == HIGH)
   {
     digitalWrite(up_output, HIGH);
-    delay(5);
+    Serial.println("UP");
   }
-  if(click_status == LOW)
+  if(click_status == LOW && prev_click_status == HIGH)
   {
     digitalWrite(click_output, HIGH);
-    delay(5);
+    Serial.println("SELECT");
   }
-  if(down_status == LOW)
+  if(down_status == LOW && prev_down_status == HIGH)
   {
     digitalWrite(down_output, HIGH);
-    delay(5);
+    Serial.println("DOWN");
   }
 
   //read a gesture from the device
-  // uint8_t gesture = apds.readGesture();
-  // if(gesture == APDS9960_UP)
-  // {
-  //   Serial.println("SELECT");
-  //   digitalWrite(click_pin, HIGH);
-  // }
-  // if(gesture == APDS9960_LEFT)
-  // {
-  //   Serial.println("UP");
-  //   digitalWrite(up_pin, HIGH);
-  // }
-  // if(gesture == APDS9960_RIGHT)
-  // {
-  //   Serial.println("DOWN");
-  //   digitalWrite(down_pin, HIGH);
-  // }
+  uint8_t gesture = apds.readGesture();
+  if(gesture == APDS9960_UP || gesture == APDS9960_DOWN)
+  {
+    Serial.println("SELECT");
+    digitalWrite(click_output, HIGH);
+  }
+  if(gesture == APDS9960_LEFT)
+  {
+    Serial.println("UP");
+    digitalWrite(up_output, HIGH);
+  }
+  if(gesture == APDS9960_RIGHT)
+  {
+    Serial.println("DOWN");
+    digitalWrite(down_output, HIGH);
+  }
 
   digitalWrite(up_output, LOW);
   digitalWrite(click_output, LOW);
   digitalWrite(down_output, LOW);
+
+  prev_up_status = up_status;
+  prev_click_status = click_status;
+  prev_down_status = down_status;
+
+  delay(10);
 }
