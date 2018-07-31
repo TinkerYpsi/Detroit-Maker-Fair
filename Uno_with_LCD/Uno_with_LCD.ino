@@ -1,15 +1,7 @@
-#include <LiquidCrystal.h>
+#include <TT_LiquidCrystal.h>
 #include <cactus_io_AM2302.h>
 
-#define AM2302_PIN 2     // pin of humidity sensor data line
-
-// select the pins used on the LCD panel
-LiquidCrystal lcd(8, 9, 4, 5, 6, 7);      //default pins for the Arduino Uno
-AM2302 dht(AM2302_PIN);
-
 // define some values used by the panel and buttons
-int lcd_key     = 0;
-int adc_key_in  = 0;
 #define btnRIGHT  0
 #define btnUP     1
 #define btnDOWN   2
@@ -17,14 +9,236 @@ int adc_key_in  = 0;
 #define btnSELECT 4
 #define btnNONE   5
 
-const int top_button = A0;
-const int mid_button = A1;
-const int bottom_button = A2;
+int humidity_pin = 2;
+int down_input = 11;
+int interruptPin = 3;
+int up_input = 12;
+int mega_output = 13;
+int i = 0;
+String selected_option;
+String prev_selected_option;
+bool humidity_mode = false;
 
-// read the onboard buttons
+String options[7] = {"Race", "Laser Harp", "RFID", "Temp/Humidity", "Distance sensor", "Touchpad", "Big Red Switch"};
+
+int read_onboard_LCD_buttons();
+int read_external_LCD_buttons();
+void switchMode(String selected_option);
+
+TT_LiquidCrystal lcd(8, 9, 4, 5, 6, 7);      //default pins for the Arduino Uno
+AM2302 dht(humidity_pin);
+
+
+void setup()
+{
+  Serial.begin(9600);
+  pinMode(humidity_pin, INPUT_PULLUP);
+  pinMode(down_input, INPUT);
+  pinMode(click_input, INPUT);
+  pinMode(up_input, INPUT);
+  pinMode(mega_output, OUTPUT);
+  lcd.begin(16,2);
+  lcd.setCursor(0,0);
+  lcd.print(options[0]);
+  Serial.println(options[0]);
+  lcd.cursor();
+}
+
+void loop()
+{
+  static long last_button_check = millis();
+  int btnClicked = btnNONE;
+  if(millis() - last_button_check > 300)
+  {
+    btnClicked = read_external_LCD_buttons();
+  }
+  else
+  {
+    btnClicked = btnNONE;
+  }
+
+  switch(btnClicked)
+  {
+    case btnUP:
+    {
+      humidity_mode = false;
+      lcd.clear();
+      // if i is less than size of options array
+      if(i < sizeof(options)/sizeof(String))
+      {
+        lcd.print(options[i + 1]);
+        Serial.println(options[i + 1]);
+        i++;
+      }
+      else
+      {
+        i = 0;
+        lcd.print(options[i]);
+        Serial.println(options[i]);
+      }
+      lcd.cursor();
+      break;
+    }
+    case btnDOWN:
+    {
+      humidity_mode = false;
+      lcd.clear();
+      if(i > 0)
+      {
+        lcd.print(options[i - 1]);
+        Serial.println(options[i - 1]);
+        i--;
+      }
+      else
+      {
+        // i is equal to size of options array
+        i = sizeof(options) / sizeof(String);
+        lcd.print(options[i]);
+      }
+      lcd.cursor();
+      break;
+    }
+    case btnSELECT:
+    {
+      humidity_mode = false;
+      lcd.noCursor();
+      selected_option = options[i];
+      break;
+    }
+    case btnNONE:
+    {
+      // do nothing
+      break;
+    }
+  }
+
+  if(prev_selected_option != selected_option)
+  {
+    switchMode(selected_option);
+    prev_selected_option = selected_option;
+  }
+
+  static long last_check = millis();
+  if(humidity_mode && ((millis() - last_check) > 3000))
+  {
+    last_check = millis();
+    Serial.print("last check: ");
+    Serial.println(last_check);
+    Serial.print("time: ");
+    Serial.println(millis());
+    lcd.clear();
+    dht.readHumidity();
+    dht.readTemperature();
+
+    // Check if any reads failed and exit early (to try again).
+    if (isnan(dht.humidity) || isnan(dht.temperature_C)) {
+      Serial.println("DHT sensor read failure!");
+      return;
+    }
+
+    int btnClicked = read_external_LCD_buttons();
+    if(btnClicked != btnNONE)
+    {
+      humidity_mode = false;
+    }
+
+    lcd.setCursor(0,0);   // set cursor to 1st column, 1st row
+    lcd.print("Humidity: ");
+    lcd.print(dht.humidity); lcd.print("%");
+    Serial.print(dht.humidity); Serial.print(" %\t\t");
+    lcd.setCursor(0,1);   // set cursor to 1st column, 2nd row
+    lcd.print("Temp: ");
+    lcd.print(dht.temperature_F); lcd.print("F");
+    Serial.print(dht.temperature_F); Serial.print(" *F\n");
+  }
+
+}
+
+void switchMode(String selected_option)
+{
+  // Race
+  if(selected_option == options[0])
+  {
+    Serial.write("r");
+  }
+
+  // Laser harp
+  else if(selected_option == options[1])
+  {
+    Serial.write("h");
+  }
+
+  // RFID
+  else if(selected_option == options[2])
+  {
+    Serial.write("i");
+  }
+
+  // Temp/Humidity sensor
+  else if(selected_option == options[3])
+  {
+    humidity_mode = true;
+  }
+
+  // Distance sensor
+  else if(selected_option == options[4])
+  {
+    Serial.write("d");
+  }
+
+  // Touchpad
+  else if(selected_option == options[5])
+  {
+    Serial.write("p");
+  }
+
+  // Big red switch
+  else if(selected_option == options[6])
+  {
+    Serial.write("s");
+  }
+}
+
+// read external read_onboard_LCD_buttons
+int read_external_LCD_buttons()
+{
+  int up = HIGH;
+  int click = HIGH;
+  int down = HIGH;
+
+  up = digitalRead(up_input);
+  click = digitalRead(click_input);
+  down = digitalRead(down_input);
+
+  static int prev_up_state = up;
+  static int prev_click_state = click;
+  static int prev_down_state = down;
+
+  if(click == LOW && prev_click_state == HIGH)
+  {
+    return btnSELECT;
+  }
+  else if(down == LOW && prev_down_state == HIGH)
+  {
+    return btnDOWN;
+  }
+  else if(up == LOW && prev_up_state == HIGH)
+  {
+    return btnUP;
+  }
+  else
+  {
+    return btnNONE;
+  }
+
+  prev_up_state = up;
+  prev_click_state = click;
+  prev_down_state = down;
+}
+
 int read_onboard_LCD_buttons()
 {
- adc_key_in = analogRead(0);      // read the value from the sensor
+ int adc_key_in = analogRead(0);      // read the value from the sensor
  // my buttons when read are centered at these values: 0, 144, 329, 504, 741
  // we add approx 50 to those values and check to see if we are close
 
@@ -37,98 +251,4 @@ int read_onboard_LCD_buttons()
 
 
  return btnNONE;  // when all others fail, return this...
-}
-
-// read external read_onboard_LCD_buttons
-int read_external_LCD_buttons()
-{
-  int up = digitalRead(top_button);
-  int click = digitalRead(mid_button);
-  int down = digitalRead(bottom_button);
-
-  // up was pressed
-  if(click == LOW)
-  {
-    return btnSELECT;
-  }
-  else if(down == LOW)
-  {
-    return btnDOWN;
-  }
-  else if(up == LOW)
-  {
-    return btnUP;
-  }
-  else
-  {
-    return btnNONE;
-  }
-}
-
-void setup()
-{
- lcd.begin(16, 2);              // start the library
- dht.begin();                   // start the humidity sensor
- lcd.setCursor(0,0);
- pinMode(top_button, INPUT_PULLUP);
- pinMode(mid_button, INPUT_PULLUP);
- pinMode(bottom_button, INPUT_PULLUP);
- lcd.print("Push the buttons"); // print a simple message
- Serial.begin(9600);
- Serial.println("RH\t\tTemp (F)\n");
-}
-
-void loop()
-{
-
-  // HUMIDITY SENSOR CODE
-  dht.readHumidity();
-  dht.readTemperature();
-
-  // Check if any reads failed and exit early (to try again).
-  if (isnan(dht.humidity) || isnan(dht.temperature_C)) {
-    Serial.println("DHT sensor read failure!");
-    return;
-  }
-  lcd.setCursor(0,0);   // set cursor to 1st column, 1st row
-  lcd.print("Humidity: ");
-  lcd.print(dht.humidity); lcd.print("%");
-  Serial.print(dht.humidity); Serial.print(" %\t\t");
-  lcd.setCursor(0,1);   // set cursor to 1st column, 2nd row
-  lcd.print("Temp: ");
-  lcd.print(dht.temperature_F); lcd.print("F");
-  Serial.print(dht.temperature_F); Serial.print(" *F\n");
-
-  // Wait a few seconds between measurements. The AM2302 should not be read at a higher frequency of
-  // about once every 2 seconds. So we add a 3 second delay to cover this.
-  delay(3000);
-
-
-  // BUTTON READING CODE
- lcd.setCursor(0,1);            // move to the begining of the second line
- lcd_key = read_external_LCD_buttons();  // read the external buttons
-
- switch (lcd_key)               // depending on which button was pushed, we perform an action
- {
-   case btnUP:
-     {
-     lcd.print("UP    ");
-     break;
-     }
-   case btnDOWN:
-     {
-     lcd.print("DOWN  ");
-     break;
-     }
-   case btnSELECT:
-     {
-     lcd.print("SELECT");
-     break;
-     }
-     case btnNONE:
-     {
-     lcd.print("NONE  ");
-     break;
-     }
- }
 }

@@ -8,7 +8,7 @@ int down_button = 8;
 
 // output pins to LCD
 int up_output = 6;
-int click_output = 7;
+int interruptPin = 7;
 int down_output = 5;
 
 int prev_up_status;
@@ -45,17 +45,17 @@ void loop()
 
   if(up_status == LOW && prev_up_status == HIGH)
   {
-    digitalWrite(up_output, HIGH);
+    digitalWrite(up_output, LOW);
     Serial.println("UP");
   }
   if(click_status == LOW && prev_click_status == HIGH)
   {
-    digitalWrite(click_output, HIGH);
+    digitalWrite(click_output, LOW);
     Serial.println("SELECT");
   }
   if(down_status == LOW && prev_down_status == HIGH)
   {
-    digitalWrite(down_output, HIGH);
+    digitalWrite(down_output, LOW);
     Serial.println("DOWN");
   }
 
@@ -64,26 +64,28 @@ void loop()
   if(gesture == APDS9960_UP || gesture == APDS9960_DOWN)
   {
     Serial.println("SELECT");
-    digitalWrite(click_output, HIGH);
+    digitalWrite(click_output, LOW);
+    delay(10);
   }
   if(gesture == APDS9960_LEFT)
   {
     Serial.println("UP");
-    digitalWrite(up_output, HIGH);
+    digitalWrite(up_output, LOW);
+    delay(10);
   }
   if(gesture == APDS9960_RIGHT)
   {
     Serial.println("DOWN");
-    digitalWrite(down_output, HIGH);
+    digitalWrite(down_output, LOW);
+    delay(10);
   }
-
-  digitalWrite(up_output, LOW);
-  digitalWrite(click_output, LOW);
-  digitalWrite(down_output, LOW);
+  delay(100);
+  digitalWrite(up_output, HIGH);
+  digitalWrite(click_output, HIGH);
+  digitalWrite(down_output, HIGH);
 
   prev_up_status = up_status;
   prev_click_status = click_status;
   prev_down_status = down_status;
 
-  delay(10);
 }
