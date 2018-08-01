@@ -68,6 +68,7 @@ void loop()
         Serial.println(options[i]);
       }
       lcd.cursor();
+      btnClicked = btnNONE;
       break;
     }
     case btnDOWN:
@@ -87,6 +88,7 @@ void loop()
         lcd.print(options[i]);
       }
       lcd.cursor();
+      btnClicked = btnNONE;
       break;
     }
     case btnSELECT:
@@ -94,6 +96,7 @@ void loop()
       humidity_mode = false;
       lcd.noCursor();
       selected_option = options[i];
+      btnClicked = btnNONE;
       break;
     }
     case btnNONE:
