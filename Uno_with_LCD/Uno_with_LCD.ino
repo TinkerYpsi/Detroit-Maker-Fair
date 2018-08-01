@@ -1,5 +1,6 @@
 #include <TT_LiquidCrystal.h>
 #include <cactus_io_AM2302.h>
+#include <SoftwareSerial.h>
 
 // define some values used by the panel and buttons
 #define btnRIGHT  0

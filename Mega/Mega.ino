@@ -6,7 +6,6 @@
 #include <Adafruit_NeoPixel.h>
 #include <MFRC522.h>
 
-
 // necessary for Adafruit Neopixels
 #ifdef __AVR__
   #include <avr/power.h>
@@ -54,9 +53,6 @@ const int JOY_BUTTON = 47;
 const int JOY_X = A14;
 const int JOY_Y = A15;
 
-const int SERIAL_TX_PORT = 13;
-const int SERIAL_RX_PORT = A0;
-SoftwareSerial mySerial(SERIAL_RX_PORT, SERIAL_TX_PORT);
 
 int IR_pin = A8;
 int bigRedSwitch = 30;   // TODO: IMPLEMENT
@@ -64,7 +60,7 @@ int bigRedSwitch = 30;   // TODO: IMPLEMENT
 
 void setup()
 {
-  Serial.begin(115200);
+  Serial.begin(9600);
 
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
