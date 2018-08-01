@@ -29,6 +29,9 @@ void read_external_LCD_buttons();
 TT_LiquidCrystal lcd(8, 9, 4, 5, 6, 7);      //default pins for the Arduino Uno
 AM2302 dht(humidity_pin);
 
+const int SERIAL_TX_PORT = 13;
+const int SERIAL_RX_PORT = A0;
+SoftwareSerial mySerial(SERIAL_RX_PORT, SERIAL_TX_PORT);
 
 void setup()
 {
@@ -152,19 +155,19 @@ void switchMode(String selected_option)
   // Race
   if(selected_option == options[0])
   {
-    Serial.write("r");
+    mySerial.write("r");
   }
 
   // Laser harp
   else if(selected_option == options[1])
   {
-    Serial.write("h");
+    mySerial.write("h");
   }
 
   // RFID
   else if(selected_option == options[2])
   {
-    Serial.write("i");
+    mySerial.write("i");
   }
 
   // Temp/Humidity sensor
@@ -176,19 +179,19 @@ void switchMode(String selected_option)
   // Distance sensor
   else if(selected_option == options[4])
   {
-    Serial.write("d");
+    mySerial.write("d");
   }
 
   // Touchpad
   else if(selected_option == options[5])
   {
-    Serial.write("p");
+    mySerial.write("p");
   }
 
   // Big red switch
   else if(selected_option == options[6])
   {
-    Serial.write("s");
+    mySerial.write("s");
   }
 }
 

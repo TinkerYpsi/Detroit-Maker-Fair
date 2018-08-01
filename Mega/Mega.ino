@@ -54,7 +54,9 @@ const int JOY_BUTTON = 47;
 const int JOY_X = A14;
 const int JOY_Y = A15;
 
-
+const int SERIAL_TX_PORT = 13;
+const int SERIAL_RX_PORT = A0;
+SoftwareSerial mySerial(SERIAL_RX_PORT, SERIAL_TX_PORT);
 
 int IR_pin = A8;
 int bigRedSwitch = 30;   // TODO: IMPLEMENT
@@ -63,7 +65,7 @@ int bigRedSwitch = 30;   // TODO: IMPLEMENT
 void setup()
 {
   Serial.begin(115200);
-  
+
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
 
@@ -80,19 +82,19 @@ void setup()
 
   SPI.begin();                                                  // Init SPI bus
   mfrc522.PCD_Init();                                              // Init MFRC522 card
-  
+
 
   pinMode(BUTTON1, INPUT_PULLUP);
   pinMode(BUTTON2, INPUT_PULLUP);
   pinMode(bigRedSwitch, INPUT);
   pinMode(IR_pin, INPUT);
-  
+
   Timer1.initialize(10000);         // initialize timer1, and set a 1/2 second period
   Timer1.attachInterrupt(checkInputs);  // attaches callback() as a timer overflow interrupt
-  
+
   Serial.println("finished running setup");
 
-  
+
 }
 
 typedef enum _mode{
@@ -180,7 +182,7 @@ void loop()
 }
 
 void checkInputs(){
-  
+
 }
 
 void runJoystick(){
@@ -188,7 +190,7 @@ void runJoystick(){
   int y_val = 0;
   bool button_val = digitalRead(JOY_BUTTON);
   const int SAMPLES = 20;
-  
+
   for(int i = 0; i < SAMPLES; i++)
   {
     x_val += analogRead(JOY_X);
@@ -220,11 +222,11 @@ void runDistanceSensor(){
       ir_val += analogRead(IR_pin);
     }
     ir_val /= SAMPLES;
-  
+
     Serial.print("ir_val: ");
     Serial.println(ir_val);
     int pixels_to_light = map(ir_val, 540, 170, 0, 45);
-  
+
     for(int i = 0; i < NUMPIXELS; i++)
     {
       if(i < pixels_to_light){
@@ -284,7 +286,7 @@ void runRFID(){
   {
     const int TAG_COUNT = 3;
     unsigned long id[TAG_COUNT] = {0};
-  
+
     for(int i = 0; i < TAG_COUNT; i++)
     {
       Serial.print("Present key ");
@@ -352,7 +354,7 @@ void runRFID(){
           }
         }
       }
-      
+
       switch(command)
       {
         case(0):
@@ -374,7 +376,7 @@ void runRFID(){
           break;
         }
         case(3):
-        { 
+        {
           colorWipe(Wheel(random(0, 255)), 25);
           colorWipe(0, 25);
           break;
@@ -392,7 +394,7 @@ void runRace(){
   bool last_p2 = HIGH;
   long color1 = strip.Color(40, 0, 0);
   long color2 = strip.Color(0, 0, 40);
-  
+
   while(position1 < NUMPIXELS /2 && position2 > NUMPIXELS /2)
   {
     bool p1 = digitalRead(BUTTON1);
