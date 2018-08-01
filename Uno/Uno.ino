@@ -22,7 +22,7 @@ void setup()
   pinMode(click_button, INPUT_PULLUP);
   pinMode(down_button, INPUT_PULLUP);
   pinMode(up_output, OUTPUT);
-  pinMode(click_output, OUTPUT);
+  pinMode(interruptPin, OUTPUT);
   pinMode(down_output, OUTPUT);
   Serial.begin(9600);
 
@@ -39,6 +39,10 @@ void setup()
 
 void loop()
 {
+  digitalWrite(up_output, HIGH);
+  digitalWrite(down_output, HIGH);
+  digitalWrite(interruptPin, HIGH);
+
   int up_status = digitalRead(up_button);
   int click_status = digitalRead(click_button);
   int down_status = digitalRead(down_button);
@@ -46,16 +50,22 @@ void loop()
   if(up_status == LOW && prev_up_status == HIGH)
   {
     digitalWrite(up_output, LOW);
+    digitalWrite(down_output, HIGH);
+    digitalWrite(interruptPin, LOW);
     Serial.println("UP");
   }
   if(click_status == LOW && prev_click_status == HIGH)
   {
-    digitalWrite(click_output, LOW);
+    digitalWrite(up_output, LOW);
+    digitalWrite(down_output, LOW);
+    digitalWrite(interruptPin, LOW);
     Serial.println("SELECT");
   }
   if(down_status == LOW && prev_down_status == HIGH)
   {
     digitalWrite(down_output, LOW);
+    digitalWrite(up_output, HIGH);
+    digitalWrite(interruptPin, LOW);
     Serial.println("DOWN");
   }
 
@@ -63,26 +73,28 @@ void loop()
   uint8_t gesture = apds.readGesture();
   if(gesture == APDS9960_UP || gesture == APDS9960_DOWN)
   {
+    digitalWrite(up_output, LOW);
+    digitalWrite(down_output, LOW);
+    digitalWrite(interruptPin, LOW);
     Serial.println("SELECT");
-    digitalWrite(click_output, LOW);
     delay(10);
   }
   if(gesture == APDS9960_LEFT)
   {
-    Serial.println("UP");
     digitalWrite(up_output, LOW);
+    digitalWrite(down_output, HIGH);
+    digitalWrite(interruptPin, LOW);
+    Serial.println("UP");
     delay(10);
   }
   if(gesture == APDS9960_RIGHT)
   {
-    Serial.println("DOWN");
     digitalWrite(down_output, LOW);
+    digitalWrite(up_output, HIGH);
+    digitalWrite(interruptPin, LOW);
+    Serial.println("DOWN");
     delay(10);
   }
-  delay(100);
-  digitalWrite(up_output, HIGH);
-  digitalWrite(click_output, HIGH);
-  digitalWrite(down_output, HIGH);
 
   prev_up_status = up_status;
   prev_click_status = click_status;

@@ -18,12 +18,13 @@ int i = 0;
 String selected_option;
 String prev_selected_option;
 bool humidity_mode = false;
+int btnClicked = btnNONE;
 
 String options[7] = {"Race", "Laser Harp", "RFID", "Temp/Humidity", "Distance sensor", "Touchpad", "Big Red Switch"};
 
 int read_onboard_LCD_buttons();
-int read_external_LCD_buttons();
 void switchMode(String selected_option);
+void read_external_LCD_buttons();
 
 TT_LiquidCrystal lcd(8, 9, 4, 5, 6, 7);      //default pins for the Arduino Uno
 AM2302 dht(humidity_pin);
@@ -34,7 +35,8 @@ void setup()
   Serial.begin(9600);
   pinMode(humidity_pin, INPUT_PULLUP);
   pinMode(down_input, INPUT);
-  pinMode(click_input, INPUT);
+  pinMode(interruptPin, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(interruptPin), read_external_LCD_buttons, FALLING);
   pinMode(up_input, INPUT);
   pinMode(mega_output, OUTPUT);
   lcd.begin(16,2);
@@ -46,17 +48,6 @@ void setup()
 
 void loop()
 {
-  static long last_button_check = millis();
-  int btnClicked = btnNONE;
-  if(millis() - last_button_check > 300)
-  {
-    btnClicked = read_external_LCD_buttons();
-  }
-  else
-  {
-    btnClicked = btnNONE;
-  }
-
   switch(btnClicked)
   {
     case btnUP:
@@ -136,7 +127,6 @@ void loop()
       return;
     }
 
-    int btnClicked = read_external_LCD_buttons();
     if(btnClicked != btnNONE)
     {
       humidity_mode = false;
@@ -200,40 +190,62 @@ void switchMode(String selected_option)
 }
 
 // read external read_onboard_LCD_buttons
-int read_external_LCD_buttons()
+// int read_external_LCD_buttons()
+// {
+//   int up = HIGH;
+//   int click = HIGH;
+//   int down = HIGH;
+//
+//   up = digitalRead(up_input);
+//   click = digitalRead(click_input);
+//   down = digitalRead(down_input);
+//
+//   static int prev_up_state = up;
+//   static int prev_click_state = click;
+//   static int prev_down_state = down;
+//
+//   if(click == LOW && prev_click_state == HIGH)
+//   {
+//     return btnSELECT;
+//   }
+//   else if(down == LOW && prev_down_state == HIGH)
+//   {
+//     return btnDOWN;
+//   }
+//   else if(up == LOW && prev_up_state == HIGH)
+//   {
+//     return btnUP;
+//   }
+//   else
+//   {
+//     return btnNONE;
+//   }
+//
+//   prev_up_state = up;
+//   prev_click_state = click;
+//   prev_down_state = down;
+// }
+//
+void read_external_LCD_buttons()
 {
-  int up = HIGH;
-  int click = HIGH;
-  int down = HIGH;
-
-  up = digitalRead(up_input);
-  click = digitalRead(click_input);
-  down = digitalRead(down_input);
-
-  static int prev_up_state = up;
-  static int prev_click_state = click;
-  static int prev_down_state = down;
-
-  if(click == LOW && prev_click_state == HIGH)
+  int up = digitalRead(up_input);
+  int down = digitalRead(down_input);
+  if(up == LOW && down == HIGH)
   {
-    return btnSELECT;
+    btnClicked = btnUP;
   }
-  else if(down == LOW && prev_down_state == HIGH)
+  else if(up == HIGH && down == LOW)
   {
-    return btnDOWN;
+    btnClicked = btnDOWN;
   }
-  else if(up == LOW && prev_up_state == HIGH)
+  else if(up == LOW && down == LOW)
   {
-    return btnUP;
+    btnClicked = btnSELECT;
   }
   else
   {
-    return btnNONE;
+    btnClicked = btnNONE;
   }
-
-  prev_up_state = up;
-  prev_click_state = click;
-  prev_down_state = down;
 }
 
 int read_onboard_LCD_buttons()
