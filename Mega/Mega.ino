@@ -5,6 +5,8 @@
 #include <Arduino.h>
 #include <TT_Adafruit_NeoPixel.h>
 #include <MFRC522.h>
+#include <Wire.h>
+#include <TT_TouchKeypadTTP229.h>
 
 // necessary for Adafruit Neopixels
 #ifdef __AVR__
@@ -24,6 +26,7 @@ bool programMode = false;  // initialize programming mode to false
 bool successRead;    // Variable integer to keep if we have Successful Read from Reader
 
 TT_Adafruit_NeoPixel strip = TT_Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
+TT_TouchKeypadTTP229 touchpad;
 
 // for laser harp
 const int LASER_THRESHOLD = 130;
@@ -32,7 +35,7 @@ const int speakerPin = 3;
 const int LASER_COUNT = 8;
 const int LASER[LASER_COUNT] = {A0, A1, A2, A3, A4, A5, A6, A7};
 
-const int laser_val[8] = {0};
+int laser_val[8] = {0};
 
 const int tone1 = NOTE_C4;
 const int tone2 = NOTE_D4;
@@ -56,7 +59,7 @@ int previous_pixel = 29;  // position of the pixel the joystick is at
 
 
 const int IR_pin = A8;
-const int bigRedSwitch = 8;
+const int bigRedSwitch = 30;
 // if everythingOn, turn on interrupts for every demo
 bool everythingOn = false;
 
@@ -154,6 +157,12 @@ void loop()
         clearPixels();
         strip.show();
       }
+      else if(input == 's' || digitalRead(bigRedSwitch) == HIGH){
+        mode = SWITCH;
+        Serial.println("Big Red Switch");
+        clearPixels();
+        strip.show();
+      }
     }
   }
   switch(mode)
@@ -201,7 +210,7 @@ void loop()
 }
 
 void runTouchpad(){
-  
+  return;
 }
 
 void runRedSwitch(){
@@ -211,8 +220,22 @@ void runRedSwitch(){
   everythingOn = true;
   while(everythingOn)
   {
+    Serial.println("Laser harp");
     runHarp();
-    runDistanceSensor();
+
+    // Distance sensor
+    const int SAMPLES = 20;
+    int ir_val = 0;
+    for(int i = 0; i < SAMPLES; i++){
+      ir_val += analogRead(IR_pin);
+    }
+    ir_val /= SAMPLES;
+    int maxNormIR = 230;
+    if(ir_val > maxNormIR)
+    {
+      Serial.println("Distance");
+      runDistanceSensor();
+    }
 
     // Race
     int player1 = digitalRead(BUTTON1);
@@ -220,6 +243,9 @@ void runRedSwitch(){
     // if player1 or player2 presses a button
     if(!player1 || !player2)
     {
+      Serial.println("Race");
+      clearPixels();
+      strip.show();
       runRace();
     }
 
@@ -228,11 +254,16 @@ void runRedSwitch(){
     {
       if(mfrc522.PICC_ReadCardSerial())
       {
+        Serial.println("RFID");
+        clearPixels();
+        strip.show();
         runRFID();
       }
     }
 
     // Joystick
+    int x_val = 0;
+    int y_val = 0;
     for(int i = 0; i < SAMPLES; i++)
     {
       x_val += analogRead(JOY_X);
@@ -241,18 +272,26 @@ void runRedSwitch(){
     x_val /= SAMPLES;
     y_val /= SAMPLES;
     int pixel = map(x_val, 0, 800, 0, 45);
-    if(previous_pixel != pixel)
+    int minNormPixelVal = 20;
+    int maxNormPixelVal = 24;
+    if(pixel > maxNormPixelVal && pixel < minNormPixelVal)
     {
-      for(int i = 0; i < 20; i++)
-      {
-        runJoystick();
-      }
+      Serial.println("Joystick");
+      clearPixels();
+      strip.show();
+      runJoystick();
     }
     previous_pixel = pixel;
 
     // Touchpad
-
-
+    if(touchpad.returnInput())
+    {
+      Serial.println("Touchpad");
+      clearPixels();
+      strip.show();
+      runTouchpad();
+    }
+    Serial.println("everythingOn");
   }
 }
 
@@ -262,30 +301,52 @@ void stopInterrupts(){
 }
 
 void runJoystick(){
-  int x_val = 0;
-  int y_val = 0;
-  bool button_val = digitalRead(JOY_BUTTON);
-  const int SAMPLES = 20;
-
-  for(int i = 0; i < SAMPLES; i++)
+  int TIME = millis();
+  bool stillRunning = true;
+  while(stillRunning)
   {
-    x_val += analogRead(JOY_X);
-    y_val += analogRead(JOY_Y);
+    int x_val = 0;
+    int y_val = 0;
+    bool button_val = digitalRead(JOY_BUTTON);
+    const int SAMPLES = 20;
+
+    for(int i = 0; i < SAMPLES; i++)
+    {
+      x_val += analogRead(JOY_X);
+      y_val += analogRead(JOY_Y);
+    }
+    x_val /= SAMPLES;
+    y_val /= SAMPLES;
+
+
+    int pixel = map(x_val, 0, 800, 0, 45);
+    Serial.print("pixel: ");
+    Serial.println(pixel);
+    long color = Wheel(map(y_val, 0, 800, 0, 255));
+    clearPixels();
+    strip.setPixelColor(pixel, color);
+    strip.show();
+
+    char output[255];
+    sprintf(output, "X: %i  Y: %i  B: %i", x_val, y_val, button_val);
+    Serial.println(output);
+    delay(100);
+
+    // 10 second runtime in everythingOn mode
+    if(everythingOn && millis() - TIME > 10000)
+    {
+      stillRunning = false;
+    }
+    else if(everythingOn)
+    {
+      stillRunning = true;
+    }
+    else
+    {
+      stillRunning = false;
+    }
   }
-  x_val /= SAMPLES;
-  y_val /= SAMPLES;
 
-
-  int pixel = map(x_val, 0, 800, 0, 45);
-  long color = Wheel(map(y_val, 0, 800, 0, 255));
-  clearPixels();
-  strip.setPixelColor(pixel, color);
-  strip.show();
-
-  char output[255];
-  sprintf(output, "X: %i  Y: %i  B: %i", x_val, y_val, button_val);
-  Serial.println(output);
-  delay(100);
 }
 
 void runDistanceSensor(){
@@ -313,6 +374,12 @@ void runDistanceSensor(){
       }
     }
     strip.show();
+
+    int maxNormIR = 230;
+    if(everythingOn && ir_val < maxNormIR)
+    {
+      return;
+    }
   }
 }
 
@@ -358,8 +425,13 @@ unsigned long getUIDVal(){
 }
 
 void runRFID(){
+  long TIME = millis();
   while(!Serial.available())
   {
+    if(everythingOn && millis() - TIME > 5000)
+    {
+      return;
+    }
     const int TAG_COUNT = 3;
     unsigned long id[TAG_COUNT] = {0};
 
@@ -370,6 +442,10 @@ void runRFID(){
       while(1)
       {
         if(Serial.available())
+        {
+          return;
+        }
+        if(everythingOn && millis() - TIME > 5000)
         {
           return;
         }
@@ -457,6 +533,10 @@ void runRFID(){
           colorWipe(0, 25);
           break;
         }
+      }
+      if(everythingOn && millis() - TIME > 5000)
+      {
+        return;
       }
     }
   }

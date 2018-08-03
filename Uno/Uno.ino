@@ -1,5 +1,10 @@
 #include "Adafruit_APDS9960.h"
+#include <Wire.h>
+#include <TT_TouchKeypadTTP229.h>
+
+
 Adafruit_APDS9960 apds;
+TT_TouchKeypadTTP229 touchpad;
 
 // physical button connections
 int up_button = 12;
@@ -32,7 +37,7 @@ void setup()
   }
   else Serial.println("Device initialized!");
 
-  //gesture mode will be entered once proximity mode senses something close
+  // gesture mode will be entered once proximity mode senses something close
   apds.enableProximity(true);
   apds.enableGesture(true);
 }
@@ -69,7 +74,7 @@ void loop()
     Serial.println("DOWN");
   }
 
-  //read a gesture from the device
+  // read a gesture from the device
   uint8_t gesture = apds.readGesture();
   if(gesture == APDS9960_UP || gesture == APDS9960_DOWN)
   {
@@ -94,6 +99,42 @@ void loop()
     digitalWrite(interruptPin, LOW);
     Serial.println("DOWN");
     delay(10);
+  }
+
+  // read the touchpad keys
+  if(touchpad.hasInput())
+  {
+    byte pass1;   // first half of the code entered
+    byte pass2;   // second half of the code entered
+    touchpad.getKeys(&pass1, &pass2);
+    Serial.print("password: ");
+    Serial.print(pass1);
+    Serial.print(", ");
+    Serial.println(pass2);
+    if(pass2 == 0b01000000)         // code is 10
+    {
+      digitalWrite(up_output, LOW);
+      digitalWrite(down_output, HIGH);
+      digitalWrite(interruptPin, LOW);
+      Serial.println("UP");
+      delay(10);
+    }
+    else if(pass2 == 0b00001000)   // code is 13
+    {
+      digitalWrite(down_output, LOW);
+      digitalWrite(up_output, HIGH);
+      digitalWrite(interruptPin, LOW);
+      Serial.println("DOWN");
+      delay(10);
+    }
+    else if(pass1 == 0b10000000)   // code is 1
+    {
+      digitalWrite(up_output, LOW);
+      digitalWrite(down_output, LOW);
+      digitalWrite(interruptPin, LOW);
+      Serial.println("SELECT");
+      delay(10);
+    }
   }
 
   prev_up_status = up_status;
