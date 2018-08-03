@@ -3,7 +3,7 @@
 #include <EEPROM.h>     // We are going to read and write PICC's UIDs from/to EEPROM
 #include <SPI.h>        // RC522 Module uses SPI protocol
 #include <Arduino.h>
-#include <Adafruit_NeoPixel.h>
+#include <TT_Adafruit_NeoPixel.h>
 #include <MFRC522.h>
 
 // necessary for Adafruit Neopixels
@@ -23,26 +23,26 @@ constexpr uint8_t wipeB = 3;     // Button pin for WipeMode
 bool programMode = false;  // initialize programming mode to false
 bool successRead;    // Variable integer to keep if we have Successful Read from Reader
 
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
+TT_Adafruit_NeoPixel strip = TT_Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
 // for laser harp
 const int LASER_THRESHOLD = 130;
-int speakerPin = 3;
+const int speakerPin = 3;
 
 const int LASER_COUNT = 8;
 const int LASER[LASER_COUNT] = {A0, A1, A2, A3, A4, A5, A6, A7};
 
-int laser_val[8] = {0};
+const int laser_val[8] = {0};
 
-int tone1 = NOTE_C4;
-int tone2 = NOTE_D4;
-int tone3 = NOTE_E4;
-int tone4 = NOTE_F4;
-int tone5 = NOTE_G4;
-int tone6 = NOTE_A4;
-int tone7 = NOTE_B4;
-int tone8 = NOTE_C5;
-int allTones[8] = {tone1, tone2, tone3, tone4, tone5, tone6, tone7, tone8};
+const int tone1 = NOTE_C4;
+const int tone2 = NOTE_D4;
+const int tone3 = NOTE_E4;
+const int tone4 = NOTE_F4;
+const int tone5 = NOTE_G4;
+const int tone6 = NOTE_A4;
+const int tone7 = NOTE_B4;
+const int tone8 = NOTE_C5;
+const int allTones[8] = {tone1, tone2, tone3, tone4, tone5, tone6, tone7, tone8};
 
 // for racing LEDs
 const int WAIT_TIME = 30;
@@ -52,11 +52,14 @@ const int BUTTON2 = 41;
 const int JOY_BUTTON = 47;
 const int JOY_X = A14;
 const int JOY_Y = A15;
+int previous_pixel = 29;  // position of the pixel the joystick is at
 
 
-int IR_pin = A8;
-int bigRedSwitch = 30;   // TODO: IMPLEMENT
-// TODO: add serial reading from Arduino w/ LCD
+const int IR_pin = A8;
+const int bigRedSwitch = 8;
+// if everythingOn, turn on interrupts for every demo
+bool everythingOn = false;
+
 
 void setup()
 {
@@ -82,7 +85,7 @@ void setup()
 
   pinMode(BUTTON1, INPUT_PULLUP);
   pinMode(BUTTON2, INPUT_PULLUP);
-  pinMode(bigRedSwitch, INPUT);
+  pinMode(bigRedSwitch, INPUT_PULLUP);
   pinMode(IR_pin, INPUT);
 
   Timer1.initialize(10000);         // initialize timer1, and set a 1/2 second period
@@ -90,7 +93,8 @@ void setup()
 
   Serial.println("finished running setup");
 
-
+  attachInterrupt(digitalPinToInterrupt(bigRedSwitch), runRedSwitch, FALLING);
+  attachInterrupt(digitalPinToInterrupt(bigRedSwitch), stopInterrupts, RISING);
 }
 
 typedef enum _mode{
@@ -98,7 +102,10 @@ typedef enum _mode{
   HARP,
   DISTANCE,
   JOYSTICK,
-  RFID
+  RFID,
+  TOUCHPAD,
+  SWITCH,
+  TEMP,
 }MODE;
 
 MODE mode = RFID;
@@ -141,6 +148,12 @@ void loop()
         clearPixels();
         strip.show();
       }
+      else if(input == 'p'){
+        mode = TOUCHPAD;
+        Serial.println("Touchpad");
+        clearPixels();
+        strip.show();
+      }
     }
   }
   switch(mode)
@@ -170,6 +183,16 @@ void loop()
       runRFID();
       break;
     }
+    case TOUCHPAD:
+    {
+      runTouchpad();
+      break;
+    }
+    case SWITCH:
+    {
+      runRedSwitch();
+      break;
+    }
     default:
     {
       break;
@@ -177,8 +200,65 @@ void loop()
   }
 }
 
-void checkInputs(){
+void runTouchpad(){
+  
+}
 
+void runRedSwitch(){
+  int delay = 30;
+  clearPixels();
+  strip.theaterChase(RED, delay);
+  everythingOn = true;
+  while(everythingOn)
+  {
+    runHarp();
+    runDistanceSensor();
+
+    // Race
+    int player1 = digitalRead(BUTTON1);
+    int player2 = digitalRead(BUTTON2);
+    // if player1 or player2 presses a button
+    if(!player1 || !player2)
+    {
+      runRace();
+    }
+
+    // RFID
+    if(mfrc522.PICC_IsNewCardPresent())
+    {
+      if(mfrc522.PICC_ReadCardSerial())
+      {
+        runRFID();
+      }
+    }
+
+    // Joystick
+    for(int i = 0; i < SAMPLES; i++)
+    {
+      x_val += analogRead(JOY_X);
+      y_val += analogRead(JOY_Y);
+    }
+    x_val /= SAMPLES;
+    y_val /= SAMPLES;
+    int pixel = map(x_val, 0, 800, 0, 45);
+    if(previous_pixel != pixel)
+    {
+      for(int i = 0; i < 20; i++)
+      {
+        runJoystick();
+      }
+    }
+    previous_pixel = pixel;
+
+    // Touchpad
+
+
+  }
+}
+
+void stopInterrupts(){
+  detachInterrupt(digitalPinToInterrupt(bigRedSwitch));
+  everythingOn = false;
 }
 
 void runJoystick(){
@@ -563,3 +643,5 @@ int minIndex(int* values)
   }
   return lowest_index;
 }
+
+void checkInputs() {}

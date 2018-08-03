@@ -21,7 +21,7 @@ String prev_selected_option;
 bool humidity_mode = false;
 int btnClicked = btnNONE;
 
-String options[7] = {"Race", "Laser Harp", "RFID", "Temp/Humidity", "Distance sensor", "Touchpad", "Big Red Switch"};
+String options[8] = {"Race", "Laser Harp", "RFID", "Temp/Humidity", "Distance sensor", "Touchpad", "Big Red Switch", "Joystick"};
 
 int read_onboard_LCD_buttons();
 void switchMode(String selected_option);
@@ -31,7 +31,7 @@ TT_LiquidCrystal lcd(8, 9, 4, 5, 6, 7);      //default pins for the Arduino Uno
 AM2302 dht(humidity_pin);
 
 const int SERIAL_TX_PORT = 13;
-const int SERIAL_RX_PORT = A0;
+const int SERIAL_RX_PORT = 0;
 SoftwareSerial mySerial(SERIAL_RX_PORT, SERIAL_TX_PORT);
 
 void setup()
@@ -48,6 +48,7 @@ void setup()
   lcd.print(options[0]);
   Serial.println(options[0]);
   lcd.cursor();
+  mySerial.begin(9600);
 }
 
 void loop()
@@ -193,6 +194,10 @@ void switchMode(String selected_option)
   else if(selected_option == options[6])
   {
     mySerial.write("s");
+  }
+  else if(selected_option == options[7])
+  {
+    mySerial.write("j");
   }
 }
 
