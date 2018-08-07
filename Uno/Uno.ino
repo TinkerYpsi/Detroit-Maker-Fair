@@ -107,10 +107,10 @@ void loop()
     byte pass1;   // first half of the code entered
     byte pass2;   // second half of the code entered
     touchpad.getKeys(&pass1, &pass2);
-    Serial.print("password: ");
-    Serial.print(pass1);
-    Serial.print(", ");
-    Serial.println(pass2);
+    // Serial.print("password: ");
+    // Serial.print(pass1);
+    // Serial.print(", ");
+    // Serial.println(pass2);
     if(pass2 == 0b01000000)         // code is 10
     {
       digitalWrite(up_output, LOW);

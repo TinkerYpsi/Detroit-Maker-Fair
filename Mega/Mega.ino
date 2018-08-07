@@ -151,12 +151,6 @@ void loop()
         clearPixels();
         strip.show();
       }
-      else if(input == 'p'){
-        mode = TOUCHPAD;
-        Serial.println("Touchpad");
-        clearPixels();
-        strip.show();
-      }
       else if(input == 's' || digitalRead(bigRedSwitch) == HIGH){
         mode = SWITCH;
         Serial.println("Big Red Switch");
@@ -192,11 +186,6 @@ void loop()
       runRFID();
       break;
     }
-    case TOUCHPAD:
-    {
-      runTouchpad();
-      break;
-    }
     case SWITCH:
     {
       runRedSwitch();
@@ -207,10 +196,6 @@ void loop()
       break;
     }
   }
-}
-
-void runTouchpad(){
-  return;
 }
 
 void runRedSwitch(){
@@ -274,7 +259,9 @@ void runRedSwitch(){
     int pixel = map(x_val, 0, 800, 0, 45);
     int minNormPixelVal = 20;
     int maxNormPixelVal = 24;
-    if(pixel > maxNormPixelVal && pixel < minNormPixelVal)
+    Serial.print("pixel: ");
+    Serial.println(pixel);
+    if(pixel > maxNormPixelVal || pixel < minNormPixelVal)
     {
       Serial.println("Joystick");
       clearPixels();
@@ -282,16 +269,9 @@ void runRedSwitch(){
       runJoystick();
     }
     previous_pixel = pixel;
-
-    // Touchpad
-    if(touchpad.returnInput())
-    {
-      Serial.println("Touchpad");
-      clearPixels();
-      strip.show();
-      runTouchpad();
-    }
     Serial.println("everythingOn");
+    clearPixels();
+    strip.show();
   }
 }
 

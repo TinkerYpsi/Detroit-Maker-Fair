@@ -21,7 +21,7 @@ String prev_selected_option;
 bool humidity_mode = false;
 int btnClicked = btnNONE;
 
-String options[8] = {"Race", "Laser Harp", "RFID", "Temp/Humidity", "Distance sensor", "Touchpad", "Big Red Switch", "Joystick"};
+String options[7] = {"Race", "Laser Harp", "RFID", "Temp/Humidity", "Distance sensor", "Big Red Switch", "Joystick"};
 
 int read_onboard_LCD_buttons();
 void switchMode(String selected_option);
@@ -60,7 +60,7 @@ void loop()
       humidity_mode = false;
       lcd.clear();
       // if i is less than size of options array
-      if(i < sizeof(options)/sizeof(String))
+      if(i + 1 < sizeof(options)/sizeof(String))
       {
         lcd.print(options[i + 1]);
         Serial.println(options[i + 1]);
@@ -88,8 +88,8 @@ void loop()
       }
       else
       {
-        // i is equal to size of options array
-        i = sizeof(options) / sizeof(String);
+        // options[i] is last element
+        i = sizeof(options) / sizeof(String) - 1;
         lcd.print(options[i]);
       }
       lcd.cursor();
@@ -118,36 +118,44 @@ void loop()
   }
 
   static long last_check = millis();
-  if(humidity_mode && ((millis() - last_check) > 3000))
+  static bool clearedScreen = false;
+  if(humidity_mode)
   {
-    last_check = millis();
-    Serial.print("last check: ");
-    Serial.println(last_check);
-    Serial.print("time: ");
-    Serial.println(millis());
-    lcd.clear();
-    dht.readHumidity();
-    dht.readTemperature();
-
-    // Check if any reads failed and exit early (to try again).
-    if (isnan(dht.humidity) || isnan(dht.temperature_C)) {
-      Serial.println("DHT sensor read failure!");
-      return;
-    }
-
-    if(btnClicked != btnNONE)
+    if(!clearedScreen)
     {
-      humidity_mode = false;
+      lcd.clear();
+      clearedScreen = true;
     }
+    if(millis() - last_check > 3000)
+    {
+      last_check = millis();
+      Serial.print("last check: ");
+      Serial.println(last_check);
+      Serial.print("time: ");
+      Serial.println(millis());
+      dht.readHumidity();
+      dht.readTemperature();
 
-    lcd.setCursor(0,0);   // set cursor to 1st column, 1st row
-    lcd.print("Humidity: ");
-    lcd.print(dht.humidity); lcd.print("%");
-    Serial.print(dht.humidity); Serial.print(" %\t\t");
-    lcd.setCursor(0,1);   // set cursor to 1st column, 2nd row
-    lcd.print("Temp: ");
-    lcd.print(dht.temperature_F); lcd.print("F");
-    Serial.print(dht.temperature_F); Serial.print(" *F\n");
+      // Check if any reads failed and exit early (to try again).
+      if (isnan(dht.humidity) || isnan(dht.temperature_C)) {
+        Serial.println("DHT sensor read failure!");
+        return;
+      }
+
+      if(btnClicked != btnNONE)
+      {
+        humidity_mode = false;
+      }
+
+      lcd.setCursor(0,0);   // set cursor to 1st column, 1st row
+      lcd.print("Humidity: ");
+      lcd.print(dht.humidity); lcd.print("%");
+      Serial.print(dht.humidity); Serial.print(" %\t\t");
+      lcd.setCursor(0,1);   // set cursor to 1st column, 2nd row
+      lcd.print("Temp: ");
+      lcd.print(dht.temperature_F); lcd.print("F");
+      Serial.print(dht.temperature_F); Serial.print(" *F\n");
+    }
   }
 
 }
@@ -184,18 +192,12 @@ void switchMode(String selected_option)
     mySerial.write("d");
   }
 
-  // Touchpad
-  else if(selected_option == options[5])
-  {
-    mySerial.write("p");
-  }
-
   // Big red switch
-  else if(selected_option == options[6])
+  else if(selected_option == options[5])
   {
     mySerial.write("s");
   }
-  else if(selected_option == options[7])
+  else if(selected_option == options[6])
   {
     mySerial.write("j");
   }
