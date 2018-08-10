@@ -58,7 +58,7 @@ const int JOY_Y = A15;
 
 
 const int IR_pin = A8;
-const int bigRedSwitch = 30;
+const int bigRedSwitch = 2;
 
 void setup()
 {
@@ -87,10 +87,11 @@ void setup()
   pinMode(bigRedSwitch, INPUT_PULLUP);
   pinMode(IR_pin, INPUT);
 
-  Timer1.initialize(10000);         // initialize timer1, and set a 1/2 second period
-  Timer1.attachInterrupt(checkInputs);  // attaches callback() as a timer overflow interrupt
+  // Timer1.initialize(10000);         // initialize timer1, and set a 1/2 second period
+  // Timer1.attachInterrupt(runRedSwitch);  // attaches callback() as a timer overflow interrupt
 
   Serial.println("finished running setup");
+  attachInterrupt(digitalPinToInterrupt(bigRedSwitch), runRedSwitch, RISING);
 }
 
 typedef enum _mode{
@@ -144,7 +145,7 @@ void loop()
         clearPixels();
         strip.show();
       }
-      else if(input == 's' || digitalRead(bigRedSwitch) == LOW){
+      else if(input == 's'){
         mode = SWITCH;
         Serial.println("Big Red Switch");
         clearPixels();
@@ -192,15 +193,16 @@ void loop()
 }
 
 void runRedSwitch(){
-  int delay = 30;
-  clearPixels();
-  strip.theaterChase(RED, delay);
+  while(!Serial.available() && digitalRead(bigRedSwitch) == HIGH)
+  {
+    int delay = 10;
+    clearPixels();
+    strip.theaterChase(RED, delay);
+  }
 }
 
 void runJoystick(){
-  int TIME = millis();
-  bool stillRunning = true;
-  while(stillRunning)
+  while(!Serial.available())
   {
     int x_val = 0;
     int y_val = 0;
@@ -228,22 +230,7 @@ void runJoystick(){
     sprintf(output, "X: %i  Y: %i  B: %i", x_val, y_val, button_val);
     Serial.println(output);
     delay(100);
-
-    // 10 second runtime in everythingOn mode
-    if(everythingOn && millis() - TIME > 10000)
-    {
-      stillRunning = false;
-    }
-    else if(everythingOn)
-    {
-      stillRunning = true;
-    }
-    else
-    {
-      stillRunning = false;
-    }
   }
-
 }
 
 void runDistanceSensor(){
@@ -271,12 +258,6 @@ void runDistanceSensor(){
       }
     }
     strip.show();
-
-    int maxNormIR = 230;
-    if(everythingOn && ir_val < maxNormIR)
-    {
-      return;
-    }
   }
 }
 
@@ -322,13 +303,8 @@ unsigned long getUIDVal(){
 }
 
 void runRFID(){
-  long TIME = millis();
   while(!Serial.available())
   {
-    if(everythingOn && millis() - TIME > 5000)
-    {
-      return;
-    }
     const int TAG_COUNT = 3;
     unsigned long id[TAG_COUNT] = {0};
 
@@ -339,10 +315,6 @@ void runRFID(){
       while(1)
       {
         if(Serial.available())
-        {
-          return;
-        }
-        if(everythingOn && millis() - TIME > 5000)
         {
           return;
         }
@@ -430,10 +402,6 @@ void runRFID(){
           colorWipe(0, 25);
           break;
         }
-      }
-      if(everythingOn && millis() - TIME > 5000)
-      {
-        return;
       }
     }
   }
