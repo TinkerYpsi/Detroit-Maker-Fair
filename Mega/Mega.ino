@@ -55,14 +55,10 @@ const int BUTTON2 = 41;
 const int JOY_BUTTON = 47;
 const int JOY_X = A14;
 const int JOY_Y = A15;
-int previous_pixel = 29;  // position of the pixel the joystick is at
 
 
 const int IR_pin = A8;
 const int bigRedSwitch = 30;
-// if everythingOn, turn on interrupts for every demo
-bool everythingOn = false;
-
 
 void setup()
 {
@@ -95,9 +91,6 @@ void setup()
   Timer1.attachInterrupt(checkInputs);  // attaches callback() as a timer overflow interrupt
 
   Serial.println("finished running setup");
-
-  attachInterrupt(digitalPinToInterrupt(bigRedSwitch), runRedSwitch, FALLING);
-  attachInterrupt(digitalPinToInterrupt(bigRedSwitch), stopInterrupts, RISING);
 }
 
 typedef enum _mode{
@@ -151,7 +144,7 @@ void loop()
         clearPixels();
         strip.show();
       }
-      else if(input == 's' || digitalRead(bigRedSwitch) == HIGH){
+      else if(input == 's' || digitalRead(bigRedSwitch) == LOW){
         mode = SWITCH;
         Serial.println("Big Red Switch");
         clearPixels();
@@ -202,82 +195,6 @@ void runRedSwitch(){
   int delay = 30;
   clearPixels();
   strip.theaterChase(RED, delay);
-  everythingOn = true;
-  while(everythingOn)
-  {
-    Serial.println("Laser harp");
-    runHarp();
-
-    // Distance sensor
-    const int SAMPLES = 20;
-    int ir_val = 0;
-    for(int i = 0; i < SAMPLES; i++){
-      ir_val += analogRead(IR_pin);
-    }
-    ir_val /= SAMPLES;
-    int maxNormIR = 230;
-    if(ir_val > maxNormIR)
-    {
-      Serial.println("Distance");
-      runDistanceSensor();
-    }
-
-    // Race
-    int player1 = digitalRead(BUTTON1);
-    int player2 = digitalRead(BUTTON2);
-    // if player1 or player2 presses a button
-    if(!player1 || !player2)
-    {
-      Serial.println("Race");
-      clearPixels();
-      strip.show();
-      runRace();
-    }
-
-    // RFID
-    if(mfrc522.PICC_IsNewCardPresent())
-    {
-      if(mfrc522.PICC_ReadCardSerial())
-      {
-        Serial.println("RFID");
-        clearPixels();
-        strip.show();
-        runRFID();
-      }
-    }
-
-    // Joystick
-    int x_val = 0;
-    int y_val = 0;
-    for(int i = 0; i < SAMPLES; i++)
-    {
-      x_val += analogRead(JOY_X);
-      y_val += analogRead(JOY_Y);
-    }
-    x_val /= SAMPLES;
-    y_val /= SAMPLES;
-    int pixel = map(x_val, 0, 800, 0, 45);
-    int minNormPixelVal = 20;
-    int maxNormPixelVal = 24;
-    Serial.print("pixel: ");
-    Serial.println(pixel);
-    if(pixel > maxNormPixelVal || pixel < minNormPixelVal)
-    {
-      Serial.println("Joystick");
-      clearPixels();
-      strip.show();
-      runJoystick();
-    }
-    previous_pixel = pixel;
-    Serial.println("everythingOn");
-    clearPixels();
-    strip.show();
-  }
-}
-
-void stopInterrupts(){
-  detachInterrupt(digitalPinToInterrupt(bigRedSwitch));
-  everythingOn = false;
 }
 
 void runJoystick(){

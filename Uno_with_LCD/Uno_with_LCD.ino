@@ -197,6 +197,8 @@ void switchMode(String selected_option)
   {
     mySerial.write("s");
   }
+
+  // Joystick
   else if(selected_option == options[6])
   {
     mySerial.write("j");
