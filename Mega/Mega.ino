@@ -84,14 +84,13 @@ void setup()
 
   pinMode(BUTTON1, INPUT_PULLUP);
   pinMode(BUTTON2, INPUT_PULLUP);
-  pinMode(bigRedSwitch, INPUT_PULLUP);
+  pinMode(bigRedSwitch, INPUT);
   pinMode(IR_pin, INPUT);
 
   // Timer1.initialize(10000);         // initialize timer1, and set a 1/2 second period
   // Timer1.attachInterrupt(runRedSwitch);  // attaches callback() as a timer overflow interrupt
 
   Serial.println("finished running setup");
-  attachInterrupt(digitalPinToInterrupt(bigRedSwitch), runRedSwitch, RISING);
 }
 
 typedef enum _mode{
@@ -107,10 +106,24 @@ typedef enum _mode{
 
 MODE mode = RFID;
 
+bool bigRedSwitchOn(){
+  if(digitalRead(bigRedSwitch) == HIGH){
+    return true;
+  }
+  return false;
+}
+
 void loop()
 {
-  if(Serial.available())
+  if(Serial.available() || bigRedSwitchOn())
   {
+    if(bigRedSwitchOn())
+    {
+      mode = SWITCH;
+      Serial.println("Big Red Switch");
+      clearPixels();
+      strip.show();
+    }
     delay(15);
     while(Serial.available())
     {
@@ -193,16 +206,26 @@ void loop()
 }
 
 void runRedSwitch(){
-  while(!Serial.available() && digitalRead(bigRedSwitch) == HIGH)
+  clearPixels();
+  strip.show();
+  while(!Serial.available() && bigRedSwitchOn())
   {
+    Serial.println("RED ALERT!");
     int delay = 10;
-    clearPixels();
     strip.theaterChase(RED, delay);
+  }
+  if(Serial.available() || !bigRedSwitchOn())
+  {
+    Serial.println("All clear!");
+    clearPixels();
+    strip.show();
+    return;
   }
 }
 
+
 void runJoystick(){
-  while(!Serial.available())
+  while(!Serial.available() && !bigRedSwitchOn())
   {
     int x_val = 0;
     int y_val = 0;
@@ -235,7 +258,7 @@ void runJoystick(){
 
 void runDistanceSensor(){
 // IR LED CODE
-  while(!Serial.available())
+  while(!Serial.available() && !bigRedSwitchOn())
   {
     const int SAMPLES = 20;
     int ir_val = 0;
@@ -303,7 +326,7 @@ unsigned long getUIDVal(){
 }
 
 void runRFID(){
-  while(!Serial.available())
+  while(!Serial.available() && !bigRedSwitchOn())
   {
     const int TAG_COUNT = 3;
     unsigned long id[TAG_COUNT] = {0};
@@ -314,7 +337,7 @@ void runRFID(){
       Serial.println(i);
       while(1)
       {
-        if(Serial.available())
+        if(Serial.available() || bigRedSwitchOn())
         {
           return;
         }
@@ -356,7 +379,7 @@ void runRFID(){
       }
     }
 
-    while(!Serial.available())
+    while(!Serial.available() && !bigRedSwitchOn())
     {
       unsigned long lastUID = 0;
       int command = -1;
@@ -441,7 +464,7 @@ void runRace(){
     strip.show();
     last_p1 = p1;
     last_p2 = p2;
-    if(Serial.available())
+    if(Serial.available() || bigRedSwitchOn())
     {
       clearPixels();
       strip.show();
