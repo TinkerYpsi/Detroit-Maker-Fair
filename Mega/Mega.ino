@@ -62,7 +62,8 @@ const int bigRedSwitch = 2;
 
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(115200);
+  Serial1.begin(9600);
 
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
@@ -115,7 +116,7 @@ bool bigRedSwitchOn(){
 
 void loop()
 {
-  if(Serial.available() || bigRedSwitchOn())
+  if(Serial.available() || Serial1.available() || bigRedSwitchOn())
   {
     if(bigRedSwitchOn())
     {
@@ -125,9 +126,18 @@ void loop()
       strip.show();
     }
     delay(15);
-    while(Serial.available())
+    while(Serial.available() || Serial1.available())
     {
-      char input = Serial.read();
+      char input;
+      if(Serial.available()){
+        input = Serial.read();
+        Serial.print("Serial 0 input: ");
+      }
+      else if(Serial1.available()){
+        input = Serial1.read();
+        Serial.print("Serial 1 input: ");
+      }
+      Serial.println(input);
       if(input == 'r'){
         mode = RACE;
         Serial.println("Race");
@@ -208,13 +218,13 @@ void loop()
 void runRedSwitch(){
   clearPixels();
   strip.show();
-  while(!Serial.available() && bigRedSwitchOn())
+  while(!Serial.available() && !Serial1.available() && bigRedSwitchOn())
   {
     Serial.println("RED ALERT!");
     int delay = 10;
     strip.theaterChase(RED, delay);
   }
-  if(Serial.available() || !bigRedSwitchOn())
+  if(Serial.available() || Serial1.available() || !bigRedSwitchOn())
   {
     Serial.println("All clear!");
     clearPixels();
@@ -225,12 +235,13 @@ void runRedSwitch(){
 
 
 void runJoystick(){
-  while(!Serial.available() && !bigRedSwitchOn())
+  while(!Serial.available() && !Serial1.available() && !bigRedSwitchOn())
   {
-    int x_val = 0;
+    long x_val = 0;
     int y_val = 0;
-    bool button_val = digitalRead(JOY_BUTTON);
-    const int SAMPLES = 20;
+    static int last_x_val = 0;
+    bool button_val = !digitalRead(JOY_BUTTON);
+    const int SAMPLES = 50;
 
     for(int i = 0; i < SAMPLES; i++)
     {
@@ -239,27 +250,71 @@ void runJoystick(){
     }
     x_val /= SAMPLES;
     y_val /= SAMPLES;
-
-
-    int pixel = map(x_val, 0, 800, 0, 45);
-    Serial.print("pixel: ");
-    Serial.println(pixel);
-    long color = Wheel(map(y_val, 0, 800, 0, 255));
+    static int pixel = 1;
+    if(abs(x_val - last_x_val) > 8){
+      pixel = map(x_val, 0, 800, 0, 45);
+//      Serial.print("pixel: ");
+//      Serial.println(pixel);
+      last_x_val = x_val;
+    }
+    
+    y_val /= 2;
+    long color = Wheel(map(y_val, 0, 400, 0, 255));
     clearPixels();
     strip.setPixelColor(pixel, color);
     strip.show();
 
-    char output[255];
-    sprintf(output, "X: %i  Y: %i  B: %i", x_val, y_val, button_val);
-    Serial.println(output);
-    delay(100);
+    static long last_update = millis();
+    const int UPDATE_PERIOD = 100;
+    if(millis() - last_update > UPDATE_PERIOD){
+      char output[255];
+      sprintf(output, "last X: %i X: %i  Y: %i ", last_x_val, x_val, y_val);
+      Serial.print(output);
+      Serial.print("B: ");
+      Serial.println(button_val);
+      last_update = millis();
+    }
   }
 }
 
 void runDistanceSensor(){
 // IR LED CODE
-  while(!Serial.available() && !bigRedSwitchOn())
+  while(!Serial.available() && !Serial1.available() && !bigRedSwitchOn())
   {
+
+    bool b1 = !digitalRead(BUTTON1);
+    bool b2 = !digitalRead(BUTTON2);
+    static bool last_b1 = LOW;
+    static bool last_b2 = LOW;
+
+    const int COLOR_COUNT = 5;
+    uint32_t color[COLOR_COUNT] = {
+      strip.Color(15, 35, 25),
+      strip.Color(40, 0, 0),
+      strip.Color(0, 40, 0),
+      strip.Color(0, 0, 40),
+      strip.Color(40, 0, 40)
+    };
+
+    static int active_color = 0;
+
+    if(b1 && !last_b1){
+      active_color++;
+      if(active_color > COLOR_COUNT - 1){
+        active_color = 0;
+      }
+      Serial.print("Color: ");
+      Serial.println(active_color);
+    }
+    else if(b2 && !last_b2){
+      active_color--;
+      if(active_color < 0){
+        active_color = COLOR_COUNT - 1;
+      }
+      Serial.print("Color: ");
+      Serial.println(active_color);
+    }
+    
     const int SAMPLES = 20;
     int ir_val = 0;
     for(int i = 0; i < SAMPLES; i++){
@@ -269,18 +324,21 @@ void runDistanceSensor(){
 
     Serial.print("ir_val: ");
     Serial.println(ir_val);
-    int pixels_to_light = map(ir_val, 540, 170, 0, 45);
+    int pixels_to_light = map(ir_val, 540, 290, 0, 45);
 
     for(int i = 0; i < NUMPIXELS; i++)
     {
       if(i < pixels_to_light){
-        strip.setPixelColor(i, strip.Color(15, 35, 25));
+        strip.setPixelColor(i, color[active_color]);
       }
       else{
         strip.setPixelColor(i, strip.Color(0, 0, 0));
       }
     }
     strip.show();
+
+    last_b1 = b1;
+    last_b2 = b2;
   }
 }
 
@@ -326,7 +384,7 @@ unsigned long getUIDVal(){
 }
 
 void runRFID(){
-  while(!Serial.available() && !bigRedSwitchOn())
+  while(!Serial.available() && !Serial1.available() && !bigRedSwitchOn())
   {
     const int TAG_COUNT = 3;
     unsigned long id[TAG_COUNT] = {0};
@@ -337,7 +395,7 @@ void runRFID(){
       Serial.println(i);
       while(1)
       {
-        if(Serial.available() || bigRedSwitchOn())
+        if(Serial.available() || Serial1.available() || bigRedSwitchOn())
         {
           return;
         }
@@ -379,7 +437,7 @@ void runRFID(){
       }
     }
 
-    while(!Serial.available() && !bigRedSwitchOn())
+    while(!Serial.available() && !Serial1.available() && !bigRedSwitchOn())
     {
       unsigned long lastUID = 0;
       int command = -1;
@@ -433,11 +491,11 @@ void runRFID(){
 void runRace(){
   // RACING LEDS CODE
   int position1 = 0;          // where player 1 starts the race
-  int position2 = NUMPIXELS;  // where player 2 starts the race
+  int position2 = NUMPIXELS - 1;  // where player 2 starts the race
   bool last_p1 = HIGH;
   bool last_p2 = HIGH;
-  long color1 = strip.Color(40, 0, 0);
-  long color2 = strip.Color(0, 0, 40);
+  long color1 = strip.Color(0, 0, 40);
+  long color2 = strip.Color(0, 40, 0);
 
   while(position1 < NUMPIXELS /2 && position2 > NUMPIXELS /2)
   {
@@ -464,7 +522,7 @@ void runRace(){
     strip.show();
     last_p1 = p1;
     last_p2 = p2;
-    if(Serial.available() || bigRedSwitchOn())
+    if(Serial.available() || Serial1.available() || bigRedSwitchOn())
     {
       clearPixels();
       strip.show();

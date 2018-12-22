@@ -29,7 +29,7 @@ void setup()
   pinMode(up_output, OUTPUT);
   pinMode(interruptPin, OUTPUT);
   pinMode(down_output, OUTPUT);
-  Serial.begin(9600);
+  Serial.begin(115200);
 
   if(!apds.begin())
   {

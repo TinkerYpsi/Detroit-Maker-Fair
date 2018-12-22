@@ -36,7 +36,7 @@ SoftwareSerial mySerial(SERIAL_RX_PORT, SERIAL_TX_PORT);
 
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(115200);
   pinMode(humidity_pin, INPUT_PULLUP);
   pinMode(down_input, INPUT);
   pinMode(interruptPin, INPUT_PULLUP);
