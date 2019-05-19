@@ -1,7 +1,7 @@
 #include "Adafruit_APDS9960.h"
 #include <Wire.h>
 #include <TT_TouchKeypadTTP229.h>
-
+#include <SoftwareSerial.h>
 
 Adafruit_APDS9960 apds;
 TT_TouchKeypadTTP229 touchpad;
@@ -12,13 +12,14 @@ int click_button = 9;
 int down_button = 8;
 
 // output pins to LCD
-int up_output = 6;
-int interruptPin = 7;
-int down_output = 5;
 
 int prev_up_status;
 int prev_click_status;
 int prev_down_status;
+
+const int SERIAL_TX_PORT = 6;
+const int SERIAL_RX_PORT = 5;
+SoftwareSerial myserial(SERIAL_RX_PORT, SERIAL_TX_PORT);
 
 
 void setup()
@@ -26,10 +27,8 @@ void setup()
   pinMode(up_button, INPUT_PULLUP);
   pinMode(click_button, INPUT_PULLUP);
   pinMode(down_button, INPUT_PULLUP);
-  pinMode(up_output, OUTPUT);
-  pinMode(interruptPin, OUTPUT);
-  pinMode(down_output, OUTPUT);
   Serial.begin(115200);
+  myserial.begin(9600);
 
   if(!apds.begin())
   {
@@ -44,60 +43,44 @@ void setup()
 
 void loop()
 {
-  digitalWrite(up_output, HIGH);
-  digitalWrite(down_output, HIGH);
-  digitalWrite(interruptPin, HIGH);
-
   int up_status = digitalRead(up_button);
   int click_status = digitalRead(click_button);
   int down_status = digitalRead(down_button);
 
   if(up_status == LOW && prev_up_status == HIGH)
   {
-    digitalWrite(up_output, LOW);
-    digitalWrite(down_output, HIGH);
-    digitalWrite(interruptPin, LOW);
     Serial.println("UP");
+    myserial.println("up");
   }
   if(click_status == LOW && prev_click_status == HIGH)
   {
-    digitalWrite(up_output, LOW);
-    digitalWrite(down_output, LOW);
-    digitalWrite(interruptPin, LOW);
     Serial.println("SELECT");
+    myserial.println("select");
   }
   if(down_status == LOW && prev_down_status == HIGH)
   {
-    digitalWrite(down_output, LOW);
-    digitalWrite(up_output, HIGH);
-    digitalWrite(interruptPin, LOW);
     Serial.println("DOWN");
+    myserial.println("down");
   }
 
   // read a gesture from the device
   uint8_t gesture = apds.readGesture();
   if(gesture == APDS9960_UP || gesture == APDS9960_DOWN)
   {
-    digitalWrite(up_output, LOW);
-    digitalWrite(down_output, LOW);
-    digitalWrite(interruptPin, LOW);
     Serial.println("SELECT");
+    myserial.println("select");
     delay(10);
   }
   if(gesture == APDS9960_LEFT)
   {
-    digitalWrite(up_output, LOW);
-    digitalWrite(down_output, HIGH);
-    digitalWrite(interruptPin, LOW);
     Serial.println("UP");
+    myserial.println("up");
     delay(10);
   }
   if(gesture == APDS9960_RIGHT)
   {
-    digitalWrite(down_output, LOW);
-    digitalWrite(up_output, HIGH);
-    digitalWrite(interruptPin, LOW);
     Serial.println("DOWN");
+    myserial.println("down");
     delay(10);
   }
 
@@ -113,27 +96,21 @@ void loop()
     // Serial.println(pass2);
     if(pass2 == 0b01000000)         // code is 10
     {
-      digitalWrite(up_output, LOW);
-      digitalWrite(down_output, HIGH);
-      digitalWrite(interruptPin, LOW);
       Serial.println("UP");
-      delay(10);
+      myserial.println("up");
+      delay(250);
     }
     else if(pass2 == 0b00001000)   // code is 13
     {
-      digitalWrite(down_output, LOW);
-      digitalWrite(up_output, HIGH);
-      digitalWrite(interruptPin, LOW);
       Serial.println("DOWN");
-      delay(10);
+      myserial.println("down");
+      delay(250);
     }
     else if(pass1 == 0b10000000)   // code is 1
     {
-      digitalWrite(up_output, LOW);
-      digitalWrite(down_output, LOW);
-      digitalWrite(interruptPin, LOW);
       Serial.println("SELECT");
-      delay(10);
+      myserial.println("select");
+      delay(250);
     }
   }
 
